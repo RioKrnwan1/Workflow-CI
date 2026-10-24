@@ -1,0 +1,15 @@
+artifact_uri: file:///home/runner/work/Workflow-CI/Workflow-CI/MLProject/mlruns/0/b64ab81aaf8c4bd1a06b180ef3020d93/artifacts
+end_time: 1792856530699
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: b64ab81aaf8c4bd1a06b180ef3020d93
+run_name: trusting-dove-840
+run_uuid: b64ab81aaf8c4bd1a06b180ef3020d93
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1792856523031
+status: 3
+tags: []
+user_id: runner
