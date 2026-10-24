@@ -86,7 +86,7 @@ jobs:
           uri = os.environ["MLFLOW_TRACKING_URI"]
           client = MlflowClient(tracking_uri=uri)
 
-          # Log menunjukkan run tersimpan di eksperimen Default (ID 0).
+          # Berdasarkan log sebelumnya, run tersimpan di eksperimen Default.
           runs = client.search_runs(
               experiment_ids=["0"],
               order_by=["attributes.start_time DESC"],
@@ -115,7 +115,7 @@ jobs:
 
       - name: Build Docker model
         run: |
-          mlflow build-docker \
+          mlflow models build-docker \
             --model-uri "runs:/${{ steps.latest-run.outputs.run_id }}/model" \
             --name "plant-disease-model:latest"
 
