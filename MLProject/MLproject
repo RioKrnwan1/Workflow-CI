@@ -1,0 +1,12 @@
+
+name: plant-disease-workflow
+
+conda_env: conda.yaml
+
+entry_points:
+  main:
+    parameters:
+      dataset:
+        type: str
+        default: "dataset_preprocessing/images"
+    command: "python modelling.py --dataset {dataset}"

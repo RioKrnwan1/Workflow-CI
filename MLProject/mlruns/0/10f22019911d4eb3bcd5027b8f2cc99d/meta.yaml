@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/SMSML_Rio-Kurniawan/Workflow-CI/MLProject/mlruns/0/10f22019911d4eb3bcd5027b8f2cc99d/artifacts
+end_time: 1792846027995
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 10f22019911d4eb3bcd5027b8f2cc99d
+run_name: spiffy-shad-792
+run_uuid: 10f22019911d4eb3bcd5027b8f2cc99d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1792846014817
+status: 4
+tags: []
+user_id: Rio Kurniawan

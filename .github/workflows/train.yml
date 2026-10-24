@@ -1,0 +1,113 @@
+
+name: MLflow CI and Docker Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12.7
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+
+      - name: Check environment
+        run: |
+          python --version
+          pip --version
+          docker --version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mlflow==2.19.0 scikit-learn==1.9.1 pandas pillow
+
+      - name: Run MLflow Project
+        working-directory: MLProject
+        env:
+          MLFLOW_TRACKING_URI: file:../mlruns
+        run: |
+          mlflow run . --env-manager=local
+
+      - name: Get latest MLflow run ID
+        id: latest-run
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import mlflow
+          from mlflow.tracking import MlflowClient
+
+          tracking_uri = str(Path("mlruns").resolve())
+          mlflow.set_tracking_uri(tracking_uri)
+          client = MlflowClient(tracking_uri=tracking_uri)
+
+          experiment = client.get_experiment_by_name(
+              "Workflow CI Plant Disease"
+          )
+          if experiment is None:
+              raise RuntimeError("MLflow experiment tidak ditemukan.")
+
+          runs = client.search_runs(
+              experiment_ids=[experiment.experiment_id],
+              order_by=["attributes.start_time DESC"],
+              max_results=1
+          )
+          if not runs:
+              raise RuntimeError("MLflow run tidak ditemukan.")
+
+          run_id = runs[0].info.run_id
+          print(f"Latest run ID: {run_id}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"run_id={run_id}\n")
+          PY
+
+      - name: Upload MLflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-artifacts
+          path: |
+            mlruns/
+            MLProject/evaluation/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Build Docker model
+        env:
+          MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
+        run: |
+          mlflow build-docker \
+            --model-uri "runs:/${{ steps.latest-run.outputs.run_id }}/model" \
+            --name "plant-disease-model:latest"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker image
+        run: |
+          docker tag plant-disease-model:latest \
+            riokrnwan1/plant-disease-model:latest
+
+      - name: Push Docker image
+        run: |
+          docker push riokrnwan1/plant-disease-model:latest
+
+      - name: Post login
+        if: always()
+        run: docker logout || true

@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/SMSML_Rio-Kurniawan/Workflow-CI/MLProject/mlruns/0/6a48e30b37fe46e9ae2aaa61bf772ec1/artifacts
+end_time: 1792846358238
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 6a48e30b37fe46e9ae2aaa61bf772ec1
+run_name: whimsical-shrike-286
+run_uuid: 6a48e30b37fe46e9ae2aaa61bf772ec1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1792846337136
+status: 3
+tags: []
+user_id: Rio Kurniawan
