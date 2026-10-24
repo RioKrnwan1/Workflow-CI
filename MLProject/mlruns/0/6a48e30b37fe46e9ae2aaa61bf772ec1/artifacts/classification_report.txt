@@ -1,9 +1,0 @@
-                             precision    recall  f1-score   support
-
-Corn_(maize)___Common_rust_       1.00      1.00      1.00        60
-      Potato___Early_blight       0.98      0.97      0.97        60
-    Tomato___Bacterial_spot       0.97      0.98      0.98        60
-
-                   accuracy                           0.98       180
-                  macro avg       0.98      0.98      0.98       180
-               weighted avg       0.98      0.98      0.98       180

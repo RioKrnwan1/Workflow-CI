@@ -1,0 +1,14 @@
+# Local MLflow runs and generated models
+MLProject/mlruns/
+MLProject/model_artifact/
+MLProject/evaluation/
+mlruns/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Temporary files
+*.log
