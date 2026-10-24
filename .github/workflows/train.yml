@@ -1,4 +1,3 @@
-
 name: MLflow CI and Docker Deployment
 
 on:
@@ -13,6 +12,8 @@ permissions:
 jobs:
   train-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: file:${{ github.workspace }}/MLProject/mlruns
 
     steps:
       - name: Checkout repository
@@ -37,19 +38,47 @@ jobs:
       - name: Run MLflow Project
         working-directory: MLProject
         run: |
+          echo "MLflow tracking URI: $MLFLOW_TRACKING_URI"
           mlflow run . --env-manager=local
 
-      - name: Get latest MLflow run ID
-        id: latest-run
-        working-directory: MLProject
+      - name: Inspect MLflow storage
         run: |
+          echo "Checking MLflow storage:"
+          find MLProject/mlruns -maxdepth 4 -type f 2>/dev/null | head -100
           python - <<'PY'
           import os
           import mlflow
           from mlflow.tracking import MlflowClient
 
-          mlflow.set_tracking_uri("file:./mlruns")
-          client = MlflowClient()
+          uri = os.environ["MLFLOW_TRACKING_URI"]
+          mlflow.set_tracking_uri(uri)
+          client = MlflowClient(tracking_uri=uri)
+
+          print("Tracking URI:", uri)
+          print("Experiments:", client.search_experiments())
+
+          for experiment in client.search_experiments():
+              print("Experiment:", experiment.name, experiment.experiment_id)
+              runs = client.search_runs(
+                  experiment_ids=[experiment.experiment_id],
+                  order_by=["attributes.start_time DESC"],
+                  max_results=5
+              )
+              for run in runs:
+                  print("Run ID:", run.info.run_id)
+                  print("Status:", run.info.status)
+                  print("Artifacts:", run.info.artifact_uri)
+          PY
+
+      - name: Get latest MLflow run ID
+        id: latest-run
+        run: |
+          python - <<'PY'
+          import os
+          from mlflow.tracking import MlflowClient
+
+          uri = os.environ["MLFLOW_TRACKING_URI"]
+          client = MlflowClient(tracking_uri=uri)
 
           experiment = client.get_experiment_by_name(
               "Workflow CI Plant Disease"
@@ -57,7 +86,7 @@ jobs:
 
           if experiment is None:
               raise RuntimeError(
-                  "Eksperimen MLflow tidak ditemukan."
+                  "Eksperimen tidak ditemukan. Periksa log Inspect MLflow storage."
               )
 
           runs = client.search_runs(
@@ -68,7 +97,7 @@ jobs:
 
           if not runs:
               raise RuntimeError(
-                  "MLflow run tidak ditemukan."
+                  "Run tidak ditemukan. Periksa log Inspect MLflow storage."
               )
 
           run_id = runs[0].info.run_id
@@ -87,9 +116,6 @@ jobs:
           retention-days: 7
 
       - name: Build Docker model
-        working-directory: MLProject
-        env:
-          MLFLOW_TRACKING_URI: file:./mlruns
         run: |
           mlflow build-docker \
             --model-uri "runs:/${{ steps.latest-run.outputs.run_id }}/model" \
