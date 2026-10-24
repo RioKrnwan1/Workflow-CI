@@ -44,7 +44,6 @@ jobs:
 
       - name: Inspect MLflow storage
         run: |
-          echo "Checking MLflow storage:"
           find MLProject/mlruns -maxdepth 4 -type f 2>/dev/null | head -100
 
           python - <<'PY'
@@ -54,15 +53,9 @@ jobs:
           uri = os.environ["MLFLOW_TRACKING_URI"]
           client = MlflowClient(tracking_uri=uri)
 
-          print("Tracking URI:", uri)
-
           for experiment in client.search_experiments():
-              print(
-                  "Experiment:",
-                  experiment.name,
-                  "ID:",
-                  experiment.experiment_id
-              )
+              print("Experiment:", experiment.name)
+              print("Experiment ID:", experiment.experiment_id)
 
               runs = client.search_runs(
                   experiment_ids=[experiment.experiment_id],
@@ -86,7 +79,6 @@ jobs:
           uri = os.environ["MLFLOW_TRACKING_URI"]
           client = MlflowClient(tracking_uri=uri)
 
-          # Berdasarkan log sebelumnya, run tersimpan di eksperimen Default.
           runs = client.search_runs(
               experiment_ids=["0"],
               order_by=["attributes.start_time DESC"],
@@ -116,6 +108,7 @@ jobs:
       - name: Build Docker model
         run: |
           mlflow models build-docker \
+            --env-manager local \
             --model-uri "runs:/${{ steps.latest-run.outputs.run_id }}/model" \
             --name "plant-disease-model:latest"
 
