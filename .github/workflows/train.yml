@@ -12,6 +12,7 @@ permissions:
 jobs:
   train-and-deploy:
     runs-on: ubuntu-latest
+
     env:
       MLFLOW_TRACKING_URI: file:${{ github.workspace }}/MLProject/mlruns
 
@@ -45,29 +46,34 @@ jobs:
         run: |
           echo "Checking MLflow storage:"
           find MLProject/mlruns -maxdepth 4 -type f 2>/dev/null | head -100
+
           python - <<'PY'
           import os
-          import mlflow
           from mlflow.tracking import MlflowClient
 
           uri = os.environ["MLFLOW_TRACKING_URI"]
-          mlflow.set_tracking_uri(uri)
           client = MlflowClient(tracking_uri=uri)
 
           print("Tracking URI:", uri)
-          print("Experiments:", client.search_experiments())
 
           for experiment in client.search_experiments():
-              print("Experiment:", experiment.name, experiment.experiment_id)
+              print(
+                  "Experiment:",
+                  experiment.name,
+                  "ID:",
+                  experiment.experiment_id
+              )
+
               runs = client.search_runs(
                   experiment_ids=[experiment.experiment_id],
                   order_by=["attributes.start_time DESC"],
                   max_results=5
               )
+
               for run in runs:
                   print("Run ID:", run.info.run_id)
                   print("Status:", run.info.status)
-                  print("Artifacts:", run.info.artifact_uri)
+                  print("Artifact URI:", run.info.artifact_uri)
           PY
 
       - name: Get latest MLflow run ID
@@ -80,24 +86,16 @@ jobs:
           uri = os.environ["MLFLOW_TRACKING_URI"]
           client = MlflowClient(tracking_uri=uri)
 
-          experiment = client.get_experiment_by_name(
-              "Workflow CI Plant Disease"
-          )
-
-          if experiment is None:
-              raise RuntimeError(
-                  "Eksperimen tidak ditemukan. Periksa log Inspect MLflow storage."
-              )
-
+          # Log menunjukkan run tersimpan di eksperimen Default (ID 0).
           runs = client.search_runs(
-              experiment_ids=[experiment.experiment_id],
+              experiment_ids=["0"],
               order_by=["attributes.start_time DESC"],
               max_results=1
           )
 
           if not runs:
               raise RuntimeError(
-                  "Run tidak ditemukan. Periksa log Inspect MLflow storage."
+                  "Run MLflow tidak ditemukan pada eksperimen Default."
               )
 
           run_id = runs[0].info.run_id
