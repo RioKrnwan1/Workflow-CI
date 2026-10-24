@@ -1,3 +1,4 @@
+
 name: MLflow CI and Docker Deployment
 
 on:
@@ -7,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   train-and-deploy:
@@ -104,6 +105,37 @@ jobs:
           path: MLProject/mlruns/
           if-no-files-found: error
           retention-days: 7
+
+      - name: Save MLflow artifacts permanently
+        env:
+          RUN_ID: ${{ steps.latest-run.outputs.run_id }}
+        run: |
+          set -e
+
+          RUN_DIR="MLProject/mlruns/0/${RUN_ID}"
+          DEST="MLProject/submission_artifacts"
+
+          test -d "${RUN_DIR}/artifacts"
+          mkdir -p "${DEST}"
+
+          cp -r "${RUN_DIR}/artifacts" "${DEST}/"
+          cp -r "${RUN_DIR}/metrics" "${DEST}/"
+          cp -r "${RUN_DIR}/params" "${DEST}/"
+          cp -r "${RUN_DIR}/tags" "${DEST}/"
+          cp "${RUN_DIR}/meta.yaml" "${DEST}/"
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "${DEST}/"
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Save MLflow submission artifacts [skip ci]"
+            git push origin HEAD:main
+          else
+            echo "Tidak ada perubahan artefak."
+          fi
 
       - name: Build Docker model
         run: |
