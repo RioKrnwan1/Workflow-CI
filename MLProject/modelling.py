@@ -1,6 +1,7 @@
-
 import os
 import argparse
+import shutil
+
 import mlflow
 import mlflow.sklearn
 
@@ -118,8 +119,6 @@ def train_and_evaluate(dataset_path):
 def log_results(run_id, search, accuracy, macro_f1, report):
     client = MlflowClient()
 
-    # MlflowClient pada MLflow 2.19.0 menggunakan log_param()
-    # untuk mencatat parameter satu per satu.
     for key, value in search.best_params_.items():
         client.log_param(run_id, key, value)
 
@@ -135,18 +134,36 @@ def log_results(run_id, search, accuracy, macro_f1, report):
     with open(report_path, "w", encoding="utf-8") as file:
         file.write(report)
 
-    # Simpan model, kemudian unggah ke run MLflow yang aktif.
     model_dir = "model_artifact"
 
     if os.path.exists(model_dir):
-        import shutil
         shutil.rmtree(model_dir)
+
+    # Tetapkan Python dan dependensi model secara eksplisit.
+    model_conda_env = {
+        "name": "plant-disease-model-env",
+        "channels": ["conda-forge"],
+        "dependencies": [
+            "python=3.12.7",
+            "pip",
+            {
+                "pip": [
+                    "mlflow==2.19.0",
+                    "scikit-learn==1.9.1",
+                    "pillow",
+                    "cloudpickle"
+                ]
+            }
+        ]
+    }
 
     mlflow.sklearn.save_model(
         sk_model=search.best_estimator_,
-        path=model_dir
+        path=model_dir,
+        conda_env=model_conda_env
     )
 
+    # Simpan isi model pada artifact path "model".
     client.log_artifacts(
         run_id,
         model_dir,
@@ -170,8 +187,6 @@ def main():
 
     mlflow.set_experiment("Workflow CI Plant Disease")
 
-    # MLflow Projects sudah membuat run terlebih dahulu.
-    # Jangan membuat run baru ketika MLFLOW_RUN_ID tersedia.
     run_id = os.environ.get("MLFLOW_RUN_ID")
 
     search, accuracy, macro_f1, report = train_and_evaluate(
@@ -187,8 +202,6 @@ def main():
             report
         )
     else:
-        # Jika file dijalankan langsung dengan Python,
-        # buat run MLflow sendiri.
         with mlflow.start_run() as run:
             log_results(
                 run.info.run_id,
