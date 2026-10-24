@@ -36,40 +36,43 @@ jobs:
 
       - name: Run MLflow Project
         working-directory: MLProject
-        env:
-          MLFLOW_TRACKING_URI: file:../mlruns
         run: |
           mlflow run . --env-manager=local
 
       - name: Get latest MLflow run ID
         id: latest-run
+        working-directory: MLProject
         run: |
           python - <<'PY'
           import os
-          from pathlib import Path
           import mlflow
           from mlflow.tracking import MlflowClient
 
-          tracking_uri = str(Path("mlruns").resolve())
-          mlflow.set_tracking_uri(tracking_uri)
-          client = MlflowClient(tracking_uri=tracking_uri)
+          mlflow.set_tracking_uri("file:./mlruns")
+          client = MlflowClient()
 
           experiment = client.get_experiment_by_name(
               "Workflow CI Plant Disease"
           )
+
           if experiment is None:
-              raise RuntimeError("MLflow experiment tidak ditemukan.")
+              raise RuntimeError(
+                  "Eksperimen MLflow tidak ditemukan."
+              )
 
           runs = client.search_runs(
               experiment_ids=[experiment.experiment_id],
               order_by=["attributes.start_time DESC"],
               max_results=1
           )
+
           if not runs:
-              raise RuntimeError("MLflow run tidak ditemukan.")
+              raise RuntimeError(
+                  "MLflow run tidak ditemukan."
+              )
 
           run_id = runs[0].info.run_id
-          print(f"Latest run ID: {run_id}")
+          print(f"Latest MLflow run ID: {run_id}")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"run_id={run_id}\n")
@@ -79,15 +82,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mlflow-artifacts
-          path: |
-            mlruns/
-            MLProject/evaluation/
+          path: MLProject/mlruns/
           if-no-files-found: error
           retention-days: 7
 
       - name: Build Docker model
+        working-directory: MLProject
         env:
-          MLFLOW_TRACKING_URI: file:${{ github.workspace }}/mlruns
+          MLFLOW_TRACKING_URI: file:./mlruns
         run: |
           mlflow build-docker \
             --model-uri "runs:/${{ steps.latest-run.outputs.run_id }}/model" \
